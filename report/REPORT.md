@@ -1,8 +1,8 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
-**Ngày:** [Ngày nộp]
+**Họ tên:** Vũ Minh Khải
+**Nhóm:** Nhóm 03
+**Ngày:** 10/04/2026
 
 ---
 
@@ -11,30 +11,35 @@
 ### Cosine Similarity (Ex 1.1)
 
 **High cosine similarity nghĩa là gì?**
-> *Viết 1-2 câu:*
+> Nghĩa là 2 câu tương đồng về ngữ nghĩa
 
 **Ví dụ HIGH similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao tương đồng:
+- Sentence A: "Con mèo nằm trên ban công"
+- Sentence B: "Trên ban công, con mèo đang nằm"
+- Tại sao tương đồng: Cả 2 đều mô tả cùng 1 ý, chỉ khác cách diễn đạt. Vector embedding của chúng sẽ trỏ gần cùng 1 hướng.
 
 **Ví dụ LOW similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao khác:
+- Sentence A: "Con mèo nằm trên ban công"
+- Sentence B: "Cái ô tô màu đen này rất đẹp"
+- Tại sao khác: Hai câu này khác hoàn toàn chủ đề, không có overlap về ngữ nghĩa. Vector embedding của chúng trỏ ra 2 hướng rất khác nhau.
 
 **Tại sao cosine similarity được ưu tiên hơn Euclidean distance cho text embeddings?**
-> *Viết 1-2 câu:*
+> Euclidean distance đo khoảng cách thẳng giữa 2 điểm trong không gian, và nó bị ảnh hưởng bởi độ lớn của vector.
+Cosine similarity thì quan tâm đến hướng, không quan tâm đến độ lớn.
+Trong NLP, hướng là thứ mang ý nghĩa. Hai câu cùng nghĩa thì trong không gian embedding, 2 vector tương ứng trỏ về cùng 1 hướng.
 
 ### Chunking Math (Ex 1.2)
 
 **Document 10,000 ký tự, chunk_size=500, overlap=50. Bao nhiêu chunks?**
-> *Trình bày phép tính:*
-> *Đáp án:*
+> overlap=50 là chunk này chứa 50 kí tự chunk ngay trước đó.
+=> Chunk 1: 500 kí tự. Từ chunk 2, mỗi chunk đóng góp thêm 450 kí tự mới (50 ki tự trùng chunk trước)
+=> Có 23 chunk: 10000 = 500 + 450 * 21 + 50
+> *Đáp án: 23 chunks
 
 **Nếu overlap tăng lên 100, chunk count thay đổi thế nào? Tại sao muốn overlap nhiều hơn?**
-> *Viết 1-2 câu:*
-
+=> Chunk 1: 500 kí tự. Từ chunk 2, mỗi chunk đóng góp thêm 400 kí tự mới (100 ki tự trùng chunk trước)
+=> Số lượng chunk sẽ tăng lên, do từ chunk thứ 2, chỉ lấy thêm 400 kí tự mới so với 450 kí tự mới với overlap=50
+Overlap nhiều hơn giúp giảm khả năng 1 câu quan trọng bị cắt đứt giữa 2 chunk. Overlap lớp, càng nhiều context được giữ lại ở mỗi chunk và AI càng ít bị miss thông tin quan trọng.
 ---
 
 ## 2. Document Selection — Nhóm (10 điểm)
