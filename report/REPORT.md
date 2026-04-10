@@ -79,7 +79,7 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2 tài liệu "Thạch San
 
 | Tài liệu           | Strategy                         | Chunk Count | Avg Length | Preserves Context?                                                                                                                           |
 | ------------------ | -------------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| cayke.txt          | FixedSizeChunker (`fixed_size`)  | 47          | 198.2      | Cắt theo số ký tự cứng nhắc. Rất dễ cắt đôi từ hoặc cắt giữa câu, làm mất ý nghĩa.                                                           |
+| caykhe.txt          | FixedSizeChunker (`fixed_size`)  | 47          | 198.2      | Cắt theo số ký tự cứng nhắc. Rất dễ cắt đôi từ hoặc cắt giữa câu, làm mất ý nghĩa.                                                           |
 |                    | SentenceChunker (`by_sentences`) | 23          | 303.0      | Giữ được trọn vẹn ý nghĩa của từng câu. Tuy nhiên, mối liên hệ giữa các câu trong cùng một đoạn có thể bị mất.                               |
 |                    | RecursiveChunker (`recursive`)   | 54          | 128.0      | Ưu tiên cắt theo đoạn văn (\n\n), sau đó mới đến dòng (\n) và câu. Nó giữ các thông tin có liên quan về mặt cấu trúc ở gần nhau nhất có thể. |
 | nguulangchucnu.txt | FixedSizeChunker (`fixed_size`)  | 35          | 199.5      | Xuyên tạc ý nghĩa do cắt vụn giữa các đoạn hội thoại hoặc diễn biến tình cảm quan trọng của Ngưu Lang và Chúc Nữ. |
@@ -100,17 +100,13 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2 tài liệu "Thạch San
 **Tại sao tôi chọn strategy này cho domain nhóm?**
 > Truyện cổ tích được viết theo đoạn văn tự nhiên, mỗi đoạn thường ứng với một tình tiết hoàn chỉnh. RecursiveChunker khai thác điều này bằng cách ưu tiên tách tại `"\n\n"` — giữ nguyên ranh giới đoạn văn gốc, tránh cắt đứt giữa chừng một sự kiện. 
 
-**Code snippet (nếu custom):**
-```python
-# Paste implementation here
-```
 
 ### So Sánh: Strategy của tôi vs Baseline
 
 | Tài liệu | Strategy | Chunk Count | Avg Length | Retrieval Quality? |
 |-----------|----------|-------------|------------|--------------------|
-| | best baseline | | | |
-| | **của tôi** | | | |
+| caykhe.txt   | best baseline | 54 |128.0 |Rất tốt, nó giữ các thông tin có liên quan về mặt cấu trúc ở gần nhau nhất có thể. |
+| caykhe.txt  | **của tôi** | 48| 144|Tốt hơn 1 chút, em mở rộng chunk_size, số đoạn có nội dung nguyên vẹn nhiều hơn. Nhưng mà chỉ 1 chút.|
 
 ### So Sánh Với Thành Viên Khác
 
@@ -134,23 +130,23 @@ Giải thích cách tiếp cận của bạn khi implement các phần chính tr
 ### Chunking Functions
 
 **`SentenceChunker.chunk`** — approach:
-> *Viết 2-3 câu: dùng regex gì để detect sentence? Xử lý edge case nào?*
+> Dùng string matching (không phải regex) với các delimiter . , ! , ? , .\n để tách câu theo từng ký tự. Edge case: câu cuối không có dấu kết thúc vẫn được append vào kết quả.
 
 **`RecursiveChunker.chunk` / `_split`** — approach:
-> *Viết 2-3 câu: algorithm hoạt động thế nào? Base case là gì?*
+> Dùng danh sách separator theo thứ tự ưu tiên (\n\n, \n, . ,  , ""); với mỗi đoạn, nếu độ dài ≤ chunk_size thì giữ nguyên, ngược lại đệ quy với separator tiếp theo. Base case: hết separator thì trả về nguyên đoạn text.
 
 ### EmbeddingStore
 
 **`add_documents` + `search`** — approach:
-> *Viết 2-3 câu: lưu trữ thế nào? Tính similarity ra sao?*
+> Mỗi document được embed thành vector rồi lưu vào self._store (list dict). Tìm kiếm bằng cách tính dot product giữa query embedding và tất cả stored embedding, lấy top-k theo score cao nhất.
 
 **`search_with_filter` + `delete_document`** — approach:
-> *Viết 2-3 câu: filter trước hay sau? Delete bằng cách nào?*
+> search_with_filter filter metadata trước (lọc các record khớp toàn bộ key-value), sau đó mới chạy similarity search trên tập đã lọc. delete_document dùng list comprehension để loại bỏ tất cả record có metadata['doc_id'] trùng với doc_id cần xóa.
 
 ### KnowledgeBaseAgent
 
 **`answer`** — approach:
-> *Viết 2-3 câu: prompt structure? Cách inject context?*
+> Retrieve top-k chunks từ store bằng search, join content thành chuỗi context. Inject context vào prompt theo dạng "Context:\n{context}\n\nQuestion: {question}\nAnswer:" rồi gọi llm_fn.
 
 ### Test Results
 
@@ -220,14 +216,14 @@ tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_tr
 
 | Pair | Sentence A | Sentence B | Dự đoán | Actual Score | Đúng? |
 |------|-----------|-----------|---------|--------------|-------|
-| 1 | | | high / low | | |
-| 2 | | | high / low | | |
-| 3 | | | high / low | | |
-| 4 | | | high / low | | |
-| 5 | | | high / low | | |
+| 1 | Nghĩa quân đánh đâu thắng đó, trăm trận trăm thắng. | Lê Lợi nhờ gươm thần đã đánh bại quân Minh, giặc bỏ chạy về phương Bắc. | high |0.78 |YES |
+| 2 | Người anh sinh ra lười biếng, trút hết việc khó nhọc cho vợ chồng em. | Người anh lên mặt, không lui tới nhà em nữa. | high |0.64 |YES |
+| 3 | Chim nói: Ăn một quả, trả cục vàng, may túi ba gang mà đựng. | Lê Lợi trèo lên cành cây và nhặt được chuôi gươm nạm ngọc sáng lấp lánh. | low | 0.21|YES |
+| 4 | Hai vợ chồng nghèo chăm chỉ đi ở cho nhà phú ông. | Vợ chồng người em thức khuya dậy sớm, cày cấy chăm chỉ, lúa được bội thu. | high | 0.62|YES |
+| 5 | Sọ Dừa xin mẹ đến chăn bò cho nhà phú ông. | Lê Lợi lên ngôi vua để trị vì và thống nhất đất nước. | low | 0.12|YES |
 
 **Kết quả nào bất ngờ nhất? Điều này nói gì về cách embeddings biểu diễn nghĩa?**
-> *Viết 2-3 câu:*
+> Câu 4, dùng nội dung trùng y hệt khá nhiều nhưng điểm lại ko quá cao -> embedding thực sự trả điểm về ngữ nghĩa, thay vì trùng nội dung.
 
 ---
 
@@ -250,11 +246,11 @@ Chạy 5 benchmark queries của nhóm trên implementation cá nhân của bạ
 --- Benchmark Results ---
 | # | Query | Top-1 Retrieved Chunk (tóm tắt) | Score | Relevant? | Agent Answer (tóm tắt) |
 |---|---|---|---|---|---|
-| 1 | Sọ Dừa có ngoại hình như thế nào từ khi sinh ra? | [book/caykhe.txt] Chim mới ăn vài quả, hai vợ chồng đã tru tréo lên: “Cả nhà c... | 0.320 | | Trong phần ngữ cảnh bạn cung cấp, không có thông tin nào về ngoại hình của Sọ Dừa từ khi sinh ra. Tôi không biết. |
-| 2 | Vì sao Thạch Sanh tốt bụng nhưng vẫn bị Lý Thông hãm hại? | [book/thachsanh.txt] Một hôm, có anh hàng rượu tên là Lý Thông đi ngang qua đó gh... | 0.285 | | Thạch Sanh tốt bụng nhưng vẫn bị Lý Thông hãm hại vì Lý Thông thấy Thạch Sanh khỏe mạnh, lại mồ côi, có thể lợi dụng được. Do đó, Lý Thông đã kết nghĩa làm anh em với Thạch Sanh để dễ dàng thao túng và hãm hại anh. |
-| 3 | Sự tích Hồ Gươm có liên quan đến vị anh hùng lịch sử nào? | [book/hoguom.txt] Đến lần thứ ba kéo lưới vẫn là lưỡi gươm đó mắc vào. Thấy lạ... | 0.346 | | Sự tích hồ gươm liên quan đến anh hùng lịch sử Lê Lợi |
-| 4 | Bi kịch của Ngưu Lang và Chức Nữ bắt nguồn từ đâu? | [book/nguulangchucnu.txt]  Một năm vào mùa thu, chị dâu bắt Ngưu Lang phải đi chăn bò,... | 0.319 | | Do Ngưu Lang và Chức Nữ vi phạm quy tắc Thiên đình dẫn đến việc Ngọc Hoàng nổi giận và chia cắt họ |
-| 5 | Bài học rõ nét nhất từ câu chuyện Cây Khế? | [book/caykhe.txt] Những ngày sung sướng nhất của hai vợ chồng người em là nhữn... | 0.247 | | Bài học rõ nét nhất từ câu chuyện Cây Khế là giá trị của lòng yêu thương, sự chăm sóc và sự cần mẫn trong cuộc sống. Hai vợ chồng chăm sóc cây khế tận tình đã gặt hái được những quả ngọt, tượng trưng cho những thành quả đạt được nhờ sự cố gắng và tình yêu đối với công việc và cuộc sống. |
+| 1 | Sọ Dừa có ngoại hình như thế nào từ khi sinh ra? | [book/caykhe.txt] Chim mới ăn vài quả, hai vợ chồng đã tru tréo lên: “Cả nhà c... | 0.320 |NO | Trong phần ngữ cảnh bạn cung cấp, không có thông tin nào về ngoại hình của Sọ Dừa từ khi sinh ra. Tôi không biết. |
+| 2 | Vì sao Thạch Sanh tốt bụng nhưng vẫn bị Lý Thông hãm hại? | [book/thachsanh.txt] Một hôm, có anh hàng rượu tên là Lý Thông đi ngang qua đó gh... | 0.285 |YES| Thạch Sanh tốt bụng nhưng vẫn bị Lý Thông hãm hại vì Lý Thông thấy Thạch Sanh khỏe mạnh, lại mồ côi, có thể lợi dụng được. Do đó, Lý Thông đã kết nghĩa làm anh em với Thạch Sanh để dễ dàng thao túng và hãm hại anh. |
+| 3 | Sự tích Hồ Gươm có liên quan đến vị anh hùng lịch sử nào? | [book/hoguom.txt] Đến lần thứ ba kéo lưới vẫn là lưỡi gươm đó mắc vào. Thấy lạ... | 0.346 |YES | Sự tích hồ gươm liên quan đến anh hùng lịch sử Lê Lợi |
+| 4 | Bi kịch của Ngưu Lang và Chức Nữ bắt nguồn từ đâu? | [book/nguulangchucnu.txt]  Một năm vào mùa thu, chị dâu bắt Ngưu Lang phải đi chăn bò,... | 0.319 |YES | Do Ngưu Lang và Chức Nữ vi phạm quy tắc Thiên đình dẫn đến việc Ngọc Hoàng nổi giận và chia cắt họ |
+| 5 | Bài học rõ nét nhất từ câu chuyện Cây Khế? | [book/caykhe.txt] Những ngày sung sướng nhất của hai vợ chồng người em là nhữn... | 0.247 |YES | Bài học rõ nét nhất từ câu chuyện Cây Khế là giá trị của lòng yêu thương, sự chăm sóc và sự cần mẫn trong cuộc sống. Hai vợ chồng chăm sóc cây khế tận tình đã gặt hái được những quả ngọt, tượng trưng cho những thành quả đạt được nhờ sự cố gắng và tình yêu đối với công việc và cuộc sống. |
 
 **Bao nhiêu queries trả về chunk relevant trong top-3?** 4 / 5
 
@@ -263,14 +259,13 @@ Chạy 5 benchmark queries của nhóm trên implementation cá nhân của bạ
 ## 7. What I Learned (5 điểm — Demo)
 
 **Điều hay nhất tôi học được từ thành viên khác trong nhóm:**
-> *Viết 2-3 câu:*
+> Cách làm việc và phân tích vấn đề. Cách prompt để sử dụng AI đề xuất chủ đề và tìm dữ liệu.
 
 **Điều hay nhất tôi học được từ nhóm khác (qua demo):**
-> *Viết 2-3 câu:*
+> Nhóm khác đã tìm hiểu về các thuật toán chunking mới nhất, cập nhật.
 
 **Nếu làm lại, tôi sẽ thay đổi gì trong data strategy?**
-> *Viết 2-3 câu:*
-
+> Thay vì dùng all-MiniLM-L6-v2, sử dụng các model embedding tốt hơn cho tiếng việt như baai/bge-m3
 ---
 
 ## Tự Đánh Giá
@@ -284,5 +279,5 @@ Chạy 5 benchmark queries của nhóm trên implementation cá nhân của bạ
 | Similarity predictions | Cá nhân | 5/ 5 |
 | Results | Cá nhân | 10/ 10 |
 | Core implementation (tests) | Cá nhân | 30/ 30 |
-| Demo | Nhóm | / 5 |
-| **Tổng** | | **/ 100** |
+| Demo | Nhóm | 5/ 5 |
+| **Tổng** | | **100/ 100** |
