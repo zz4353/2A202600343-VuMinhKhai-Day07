@@ -48,12 +48,12 @@ class SentenceChunker:
 
     def chunk(self, text: str) -> list[str]:
         z = [". ", "! ", "? ", ".\n"]
-        chunked_text = self._chunk(text.strip(), z)
+        sentences = self._chunk(text.strip(), z)
+        n = self.max_sentences_per_chunk
         result = []
-        for i in range(0, len(chunked_text), 3):
-            result.append(''.join(chunked_text[i:i+3]))
+        for i in range(0, len(sentences), n):
+            result.append(" ".join(sentences[i:i+n]))
         return result
-
 
     def _chunk(self, text, z):
         last_idx = 0
@@ -63,6 +63,9 @@ class SentenceChunker:
                 r = text[last_idx:i+2]
                 last_idx = i + 2
                 result.append(r.strip())
+        # Append the last sentence even if it has no terminator
+        if last_idx < len(text):
+            result.append(text[last_idx:].strip())
         return result
 
 
@@ -87,11 +90,21 @@ class RecursiveChunker:
     def _split(self, current_text: str, remaining_separators: list[str]) -> list[str]:
         if len(remaining_separators) == 0:
             return [current_text]
-        
+
+        sep = remaining_separators[0]
         result = []
-        r1 = current_text.split(remaining_separators[0])
-        for t in r1:
-            t = str(t)
+
+        if sep == "":
+            # Empty separator: split into individual characters
+            parts = list(current_text)
+        else:
+            parts = current_text.split(sep)
+            # Re-attach the separator to the end of each part (except the last)
+            parts = [p + sep for p in parts[:-1]] + [parts[-1]]
+
+        for t in parts:
+            if not t:
+                continue
             if len(t) <= self.chunk_size:
                 result.append(t)
             else:
