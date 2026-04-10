@@ -37,7 +37,7 @@ Trong NLP, hướng là thứ mang ý nghĩa. Hai câu cùng nghĩa thì trong k
 > *Đáp án: 23 chunks
 
 **Nếu overlap tăng lên 100, chunk count thay đổi thế nào? Tại sao muốn overlap nhiều hơn?**
-=> Chunk 1: 500 kí tự. Từ chunk 2, mỗi chunk đóng góp thêm 400 kí tự mới (100 ki tự trùng chunk trước)
+> Chunk 1: 500 kí tự. Từ chunk 2, mỗi chunk đóng góp thêm 400 kí tự mới (100 ki tự trùng chunk trước)
 => Số lượng chunk sẽ tăng lên, do từ chunk thứ 2, chỉ lấy thêm 400 kí tự mới so với 450 kí tự mới với overlap=50
 Overlap nhiều hơn giúp giảm khả năng 1 câu quan trọng bị cắt đứt giữa 2 chunk. Overlap lớp, càng nhiều context được giữ lại ở mỗi chunk và AI càng ít bị miss thông tin quan trọng.
 ---
