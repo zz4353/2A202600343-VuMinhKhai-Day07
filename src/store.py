@@ -41,11 +41,21 @@ class EmbeddingStore:
 
     def _make_record(self, doc: Document) -> dict[str, Any]:
         # TODO: build a normalized stored record for one document
-        raise NotImplementedError("Implement EmbeddingStore._make_record")
+        embedding = self._embedding_fn(doc.content)
+        metadata = {**doc.metadata, "doc_id": doc.id}
+        return {
+            "id": doc.id,
+            "content": doc.content,
+            "embedding": embedding,
+            "metadata": metadata,
+        }
 
     def _search_records(self, query: str, records: list[dict[str, Any]], top_k: int) -> list[dict[str, Any]]:
         # TODO: run in-memory similarity search over provided records
-        raise NotImplementedError("Implement EmbeddingStore._search_records")
+        query_vec = self._embedding_fn(query)
+        scored = [(_dot(query_vec, record["embedding"]), record) for record in records]
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [{**record, "score": score} for score, record in scored[:top_k]]
 
     def add_documents(self, docs: list[Document]) -> None:
         """
@@ -55,7 +65,17 @@ class EmbeddingStore:
         For in-memory: append dicts to self._store
         """
         # TODO: embed each doc and add to store
-        raise NotImplementedError("Implement EmbeddingStore.add_documents")
+        for doc in docs:
+            record = self._make_record(doc)
+            self._store.append(record)
+            self._next_index += 1
+
+        if self._use_chroma:
+            ids = [r["id"] for r in self._store[-len(docs):]]
+            documents = [r["content"] for r in self._store[-len(docs):]]
+            embeddings = [r["embedding"] for r in self._store[-len(docs):]]
+            metadatas = [r["metadata"] for r in self._store[-len(docs):]]
+            self._collection.upsert(ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas)
 
     def search(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         """
@@ -64,12 +84,12 @@ class EmbeddingStore:
         For in-memory: compute dot product of query embedding vs all stored embeddings.
         """
         # TODO: embed query, compute similarities, return top_k
-        raise NotImplementedError("Implement EmbeddingStore.search")
+        return self._search_records(query, self._store, top_k)
 
     def get_collection_size(self) -> int:
         """Return the total number of stored chunks."""
         # TODO
-        raise NotImplementedError("Implement EmbeddingStore.get_collection_size")
+        return len(self._store)
 
     def search_with_filter(self, query: str, top_k: int = 3, metadata_filter: dict = None) -> list[dict]:
         """
@@ -78,7 +98,14 @@ class EmbeddingStore:
         First filter stored chunks by metadata_filter, then run similarity search.
         """
         # TODO: filter by metadata, then search among filtered chunks
-        raise NotImplementedError("Implement EmbeddingStore.search_with_filter")
+        if metadata_filter:
+            filtered = [
+                r for r in self._store
+                if all(r["metadata"].get(k) == v for k, v in metadata_filter.items())
+            ]
+        else:
+            filtered = self._store
+        return self._search_records(query, filtered, top_k)
 
     def delete_document(self, doc_id: str) -> bool:
         """
@@ -87,4 +114,11 @@ class EmbeddingStore:
         Returns True if any chunks were removed, False otherwise.
         """
         # TODO: remove all stored chunks where metadata['doc_id'] == doc_id
-        raise NotImplementedError("Implement EmbeddingStore.delete_document")
+        before = len(self._store)
+        self._store = [r for r in self._store if r["metadata"].get("doc_id") != doc_id]
+        removed = len(self._store) < before
+        if removed and self._use_chroma:
+            results = self._collection.get(where={"doc_id": doc_id})
+            if results["ids"]:
+                self._collection.delete(ids=results["ids"])
+        return removed
